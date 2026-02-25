@@ -1,15 +1,65 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useParams } from "next/navigation";
 import { motion } from "framer-motion";
-import { Camera, Download, Heart, Thermometer, Droplets, Activity, ArrowLeft, CheckCircle2, LogOut } from "lucide-react";
+import { Camera, Download, Heart, Thermometer, Droplets, Activity, ArrowLeft, CheckCircle2, LogOut, Calendar, Pill, ChevronLeft, ChevronRight, XCircle, Clock, CheckCheck } from "lucide-react";
 import Link from "next/link";
 import GlassCard from "@/components/ui/GlassCard";
 import CircularGauge from "@/components/ui/CircularGauge";
 import ECGWaveform from "@/components/vitals/ECGWaveform";
 import BodyDiagram from "@/components/patient/BodyDiagram";
 import WebcamModal from "@/components/patient/WebcamModal";
-import { getPatient, getVitalHistory, downloadReport, checkRecovery, dischargePatient } from "@/lib/api";
+import { Spinner } from "@/components/ui/Loading";
+import { getPatient, getVitalHistory, downloadReport, checkRecovery, dischargePatient, getPatientMedications, markMedication, markAllMedications } from "@/lib/api";
+
+/* ── Mini Calendar ── */
+function MiniCalendar({ selectedDate, onSelect }: { selectedDate: Date; onSelect: (d: Date) => void }) {
+    const [viewMonth, setViewMonth] = useState(new Date(selectedDate));
+    const year = viewMonth.getFullYear();
+    const month = viewMonth.getMonth();
+    const firstDay = new Date(year, month, 1).getDay();
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const today = new Date();
+
+    const days: (number | null)[] = [];
+    for (let i = 0; i < firstDay; i++) days.push(null);
+    for (let d = 1; d <= daysInMonth; d++) days.push(d);
+
+    const isToday = (d: number) => d === today.getDate() && month === today.getMonth() && year === today.getFullYear();
+    const isSelected = (d: number) => d === selectedDate.getDate() && month === selectedDate.getMonth() && year === selectedDate.getFullYear();
+
+    return (
+        <div>
+            <div className="flex items-center justify-between mb-3">
+                <button onClick={() => setViewMonth(new Date(year, month - 1))} className="p-1.5 rounded-lg hover:bg-white/[0.06] text-white/30 hover:text-white/60 transition-all">
+                    <ChevronLeft className="w-4 h-4" />
+                </button>
+                <span className="text-xs font-semibold text-white/50">
+                    {viewMonth.toLocaleString("default", { month: "long", year: "numeric" })}
+                </span>
+                <button onClick={() => setViewMonth(new Date(year, month + 1))} className="p-1.5 rounded-lg hover:bg-white/[0.06] text-white/30 hover:text-white/60 transition-all">
+                    <ChevronRight className="w-4 h-4" />
+                </button>
+            </div>
+            <div className="grid grid-cols-7 gap-1 mb-1">
+                {["S", "M", "T", "W", "T", "F", "S"].map((d, i) => (
+                    <div key={i} className="text-[9px] text-center text-white/20 font-medium py-1">{d}</div>
+                ))}
+            </div>
+            <div className="grid grid-cols-7 gap-1">
+                {days.map((d, i) => d ? (
+                    <button key={i} onClick={() => onSelect(new Date(year, month, d))}
+                        className={`w-8 h-8 rounded-lg text-[11px] font-medium transition-all ${isSelected(d)
+                            ? "bg-cyan-500/20 text-cyan-400 border border-cyan-500/30"
+                            : isToday(d) ? "bg-white/[0.06] text-white/70 border border-white/[0.08]"
+                                : "text-white/30 hover:bg-white/[0.04] hover:text-white/50"}`}>
+                        {d}
+                    </button>
+                ) : <div key={i} />)}
+            </div>
+        </div>
+    );
+}
 
 export default function PatientDetailPage() {
     const params = useParams();
@@ -19,6 +69,11 @@ export default function PatientDetailPage() {
     const [showCam, setShowCam] = useState(false);
     const [recovery, setRecovery] = useState<any>(null);
     const [loading, setLoading] = useState(true);
+    const [meds, setMeds] = useState<any[]>([]);
+    const [medCalDate, setMedCalDate] = useState(new Date());
+    const [loadingMeds, setLoadingMeds] = useState(false);
+    const [marking, setMarking] = useState<string | null>(null);
+    const [markingAll, setMarkingAll] = useState(false);
 
     useEffect(() => {
         if (!id) return;
@@ -29,6 +84,13 @@ export default function PatientDetailPage() {
             })
             .catch(console.error)
             .finally(() => setLoading(false));
+
+        // Fetch medications
+        setLoadingMeds(true);
+        getPatientMedications(id)
+            .then((res) => setMeds(res.data || []))
+            .catch(() => setMeds([]))
+            .finally(() => setLoadingMeds(false));
     }, [id]);
 
     const handleCheckRecovery = async () => {
@@ -37,6 +99,40 @@ export default function PatientDetailPage() {
             setRecovery(r.data);
         } catch (e) { console.error(e); }
     };
+
+    const handleMark = async (med: any, action: "taken" | "missed") => {
+        const medName = med.medication_name || med.medicine_name || "";
+        setMarking(medName);
+        try {
+            await markMedication(id, medName, action);
+            setMeds(prev => prev.map(m =>
+                (m.medication_name || m.medicine_name) === medName ? { ...m, status: action } : m
+            ));
+        } catch { /* silent */ }
+        setMarking(null);
+    };
+
+    const handleMarkAll = async () => {
+        setMarkingAll(true);
+        try {
+            await markAllMedications(id);
+            setMeds(prev => prev.map(m => ({ ...m, status: "taken" })));
+        } catch { /* silent */ }
+        setMarkingAll(false);
+    };
+
+    const today = new Date();
+    const isToday = medCalDate.toDateString() === today.toDateString();
+    const isPast = medCalDate < today && !isToday;
+
+    const medsForDate = useMemo(() => {
+        return meds.map(m => ({
+            ...m,
+            _displayStatus: isPast ? "taken" : (m.status || "pending"),
+        }));
+    }, [meds, isPast]);
+
+    const pendingCount = medsForDate.filter(m => m._displayStatus === "pending").length;
 
     if (loading || !patient) {
         return (
@@ -211,6 +307,98 @@ export default function PatientDetailPage() {
                     </GlassCard>
                 </div>
             </div>
+
+            {/* ═══ MEDICATION CALENDAR ═══ */}
+            <GlassCard className="p-5">
+                <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-2">
+                        <Calendar className="w-4 h-4 text-cyan-400" />
+                        <h3 className="text-sm font-semibold text-white/60 uppercase tracking-wider">Medication Schedule</h3>
+                    </div>
+                    {isToday && pendingCount > 0 && (
+                        <button onClick={handleMarkAll} disabled={markingAll}
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/15 text-emerald-400 text-xs font-medium hover:bg-emerald-500/20 transition-all disabled:opacity-50">
+                            {markingAll ? <Spinner size={12} /> : <CheckCheck className="w-3.5 h-3.5" />}
+                            Mark All Taken
+                        </button>
+                    )}
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-[260px_1fr] gap-5">
+                    {/* Calendar Picker */}
+                    <div className="p-3 rounded-xl bg-white/[0.02] border border-white/[0.04]">
+                        <MiniCalendar selectedDate={medCalDate} onSelect={setMedCalDate} />
+                    </div>
+
+                    {/* Medications List */}
+                    <div>
+                        <div className="flex items-center justify-between mb-3">
+                            <p className="text-xs text-white/40 font-medium">
+                                {medCalDate.toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" })}
+                            </p>
+                            {isToday && <span className="text-[9px] px-2 py-0.5 rounded-full bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">Today</span>}
+                        </div>
+
+                        {loadingMeds ? (
+                            <div className="py-8 text-center"><Spinner size={20} /></div>
+                        ) : medsForDate.length > 0 ? (
+                            <div className="space-y-2">
+                                {medsForDate.map((m, i) => {
+                                    const medName = m.medication_name || m.medicine_name || "Medication";
+                                    const isTaken = m._displayStatus === "taken";
+                                    const isMissed = m._displayStatus === "missed";
+                                    const isPending = !isTaken && !isMissed;
+                                    return (
+                                        <motion.div key={i}
+                                            initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }}
+                                            transition={{ delay: i * 0.05 }}
+                                            className={`flex items-center gap-3 p-3 rounded-xl border transition-all ${isTaken
+                                                ? "bg-emerald-500/[0.04] border-emerald-500/10"
+                                                : isMissed ? "bg-red-500/[0.04] border-red-500/10"
+                                                    : "bg-white/[0.02] border-white/[0.04]"}`}>
+                                            <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${isTaken ? "bg-emerald-500/15 text-emerald-400"
+                                                : isMissed ? "bg-red-500/15 text-red-400"
+                                                    : "bg-white/[0.04] text-white/20"}`}>
+                                                {isTaken ? <CheckCircle2 className="w-4 h-4" /> : isMissed ? <XCircle className="w-4 h-4" /> : <Pill className="w-4 h-4" />}
+                                            </div>
+                                            <div className="flex-1 min-w-0">
+                                                <p className={`text-sm font-medium ${isTaken ? "text-emerald-400/70 line-through" : "text-white/60"}`}>{medName}</p>
+                                                <p className="text-[10px] text-white/20">{m.schedule || "Daily"}</p>
+                                            </div>
+                                            {isToday && isPending && (
+                                                <div className="flex items-center gap-1.5 flex-shrink-0">
+                                                    <button onClick={() => handleMark(m, "taken")} disabled={marking === medName}
+                                                        className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/15 text-emerald-400 text-[11px] font-medium hover:bg-emerald-500/20 transition-all disabled:opacity-50">
+                                                        {marking === medName ? <Spinner size={10} /> : <CheckCircle2 className="w-3 h-3" />}
+                                                        Taken
+                                                    </button>
+                                                    <button onClick={() => handleMark(m, "missed")} disabled={marking === medName}
+                                                        className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-red-500/10 border border-red-500/15 text-red-400 text-[11px] font-medium hover:bg-red-500/20 transition-all disabled:opacity-50">
+                                                        <XCircle className="w-3 h-3" />
+                                                        Missed
+                                                    </button>
+                                                </div>
+                                            )}
+                                            {(isTaken || isMissed) && (
+                                                <span className={`text-[10px] px-2 py-1 rounded-full border font-medium flex-shrink-0 ${isTaken
+                                                    ? "text-emerald-400 bg-emerald-500/10 border-emerald-500/15"
+                                                    : "text-red-400 bg-red-500/10 border-red-500/15"}`}>
+                                                    {isTaken ? "✓ Taken" : "✗ Missed"}
+                                                </span>
+                                            )}
+                                        </motion.div>
+                                    );
+                                })}
+                            </div>
+                        ) : (
+                            <div className="py-8 text-center">
+                                <Pill className="w-6 h-6 text-white/10 mx-auto mb-2" />
+                                <p className="text-xs text-white/20">No medications found</p>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            </GlassCard>
         </div>
     );
 }

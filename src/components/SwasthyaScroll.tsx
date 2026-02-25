@@ -45,6 +45,7 @@ export default function SwasthyaScroll() {
 
     const [loaded, setLoaded] = useState(false);
     const [loadProgress, setLoadProgress] = useState(0);
+    const [transitioning, setTransitioning] = useState(false);
 
     /* ── Hide scrollbar when scroll section is active ── */
     useEffect(() => {
@@ -185,11 +186,12 @@ export default function SwasthyaScroll() {
                     scrub: 1.0,
                     onUpdate: (self) => {
                         targetFrameRef.current = Math.round(frameObj.frame);
-                        // Auto-redirect to dashboard when scroll hits 98%
+                        // Cinematic transition to dashboard when scroll hits 98%
                         if (self.progress >= 0.98 && !hasRedirected.current) {
                             hasRedirected.current = true;
                             document.documentElement.classList.remove("scroll-intro-active");
-                            router.push("/dashboard");
+                            setTransitioning(true);
+                            setTimeout(() => router.push("/dashboard"), 1200);
                         }
                     },
                 },
@@ -356,6 +358,69 @@ export default function SwasthyaScroll() {
                         </svg>
                     </motion.div>
                 </div>
+
+                {/* ═══ CINEMATIC TRANSITION OVERLAY ═══ */}
+                {transitioning && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        transition={{ duration: 1.0, ease: [0.22, 1, 0.36, 1] }}
+                        className="absolute inset-0 z-[100] flex flex-col items-center justify-center"
+                        style={{ background: "radial-gradient(ellipse at center, #0d1225 0%, #0a0e1a 100%)" }}
+                    >
+                        {/* Expanding ring */}
+                        <motion.div
+                            initial={{ scale: 0, opacity: 0.6 }}
+                            animate={{ scale: 4, opacity: 0 }}
+                            transition={{ duration: 1.4, ease: "easeOut" }}
+                            className="absolute w-32 h-32 rounded-full border border-cyan-500/30"
+                        />
+                        <motion.div
+                            initial={{ scale: 0, opacity: 0.4 }}
+                            animate={{ scale: 6, opacity: 0 }}
+                            transition={{ duration: 1.6, ease: "easeOut", delay: 0.1 }}
+                            className="absolute w-32 h-32 rounded-full border border-emerald-500/20"
+                        />
+
+                        {/* Logo */}
+                        <motion.div
+                            initial={{ scale: 0.5, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1], delay: 0.15 }}
+                            className="w-16 h-16 rounded-2xl bg-gradient-to-br from-cyan-500 to-emerald-500 flex items-center justify-center shadow-2xl shadow-cyan-500/30 mb-6"
+                        >
+                            <svg className="w-8 h-8 text-white" fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
+                            </svg>
+                        </motion.div>
+
+                        {/* Text */}
+                        <motion.p
+                            initial={{ opacity: 0, y: 12 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: 0.3, duration: 0.5 }}
+                            className="text-sm font-semibold tracking-tight bg-gradient-to-r from-cyan-400 to-emerald-400 bg-clip-text text-transparent"
+                        >
+                            Entering Dashboard
+                        </motion.p>
+
+                        {/* Loading dots */}
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            transition={{ delay: 0.5 }}
+                            className="flex gap-1 mt-4"
+                        >
+                            {[0, 1, 2].map(i => (
+                                <motion.div key={i}
+                                    animate={{ scale: [1, 1.4, 1], opacity: [0.3, 1, 0.3] }}
+                                    transition={{ duration: 0.8, repeat: Infinity, delay: i * 0.15 }}
+                                    className="w-1.5 h-1.5 rounded-full bg-cyan-400"
+                                />
+                            ))}
+                        </motion.div>
+                    </motion.div>
+                )}
             </div>
         </div>
     );

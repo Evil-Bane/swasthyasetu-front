@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState, useMemo } from "react";
+import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { Users, Search, UserCheck, UserX, Plus, X } from "lucide-react";
 import GlassCard from "@/components/ui/GlassCard";
@@ -12,6 +13,7 @@ const DISEASES = ["Diabetes", "Hypertension", "COPD", "Asthma", "Heart Failure",
 const GENDERS = ["Male", "Female", "Other"];
 
 export default function PatientsPage() {
+    const router = useRouter();
     const [patients, setPatients] = useState<any[]>([]);
     const [lifecycle, setLifecycle] = useState<any>({});
     const [loading, setLoading] = useState(true);
@@ -145,6 +147,7 @@ export default function PatientsPage() {
                                 <motion.tr key={p.patient_id || i}
                                     initial={{ opacity: 0 }} animate={{ opacity: 1 }}
                                     transition={{ delay: Math.min(i * 0.02, 0.4) }}
+                                    onClick={() => p.patient_id && router.push(`/dashboard/patients/${p.patient_id}`)}
                                     className="border-b border-white/[0.03] hover:bg-white/[0.02] transition-colors group cursor-pointer"
                                 >
                                     <td className="px-5 py-3">
