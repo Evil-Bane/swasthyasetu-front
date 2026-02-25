@@ -1,0 +1,232 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ─── Base ─── */
+:root {
+    --bg: #0a0e1a;
+    --text: #f5f5f5;
+    --accent: #06b6d4;
+    --font-inter: 'Inter', system-ui, -apple-system, sans-serif;
+    --font-display: 'Space Grotesk', 'Inter', system-ui, sans-serif;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+html {
+    scroll-behavior: auto;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+}
+
+html.lenis,
+html.lenis body {
+    height: auto;
+}
+
+body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-inter);
+    overflow-x: hidden;
+}
+
+/* ─── Display / Heading Font ─── */
+.font-display {
+    font-family: var(--font-display);
+}
+
+/* ═══ SCROLLBAR HIDDEN DURING INTRO ═══ */
+html.scroll-intro-active {
+    scrollbar-width: none !important;
+    -ms-overflow-style: none !important;
+}
+html.scroll-intro-active::-webkit-scrollbar {
+    display: none !important;
+    width: 0 !important;
+}
+html.scroll-intro-active body {
+    scrollbar-width: none !important;
+    -ms-overflow-style: none !important;
+}
+html.scroll-intro-active body::-webkit-scrollbar {
+    display: none !important;
+    width: 0 !important;
+}
+
+/* ─── Loader ─── */
+.loader-ring {
+    width: 40px;
+    height: 40px;
+    border: 3px solid rgba(255, 255, 255, 0.08);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.8s ease-in-out infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+.loader-pulse {
+    animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
+
+/* ─── Glass Card — Enhanced Glassmorphism ─── */
+.glass {
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.015));
+    border: 1px solid rgba(255, 255, 255, 0.07);
+    backdrop-filter: blur(20px) saturate(1.2);
+    -webkit-backdrop-filter: blur(20px) saturate(1.2);
+    box-shadow:
+        0 8px 32px rgba(0, 0, 0, 0.3),
+        inset 0 1px 0 rgba(255, 255, 255, 0.05);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.glass:hover {
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.03));
+    border-color: rgba(255, 255, 255, 0.14);
+    box-shadow:
+        0 12px 40px rgba(0, 0, 0, 0.35),
+        inset 0 1px 0 rgba(255, 255, 255, 0.08);
+    transform: translateY(-1px);
+}
+
+/* ─── Dashboard scrollbar (visible only inside dashboard) ─── */
+html:not(.scroll-intro-active) {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.08) transparent;
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+    display: none;
+}
+.scrollbar-hide {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+
+html:not(.scroll-intro-active)::-webkit-scrollbar {
+    width: 6px;
+}
+html:not(.scroll-intro-active)::-webkit-scrollbar-track {
+    background: transparent;
+}
+html:not(.scroll-intro-active)::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.06);
+    border-radius: 3px;
+}
+html:not(.scroll-intro-active)::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.12);
+}
+
+/* ─── Gradient text utility ─── */
+.gradient-text {
+    background: linear-gradient(135deg, #06b6d4 0%, #10b981 50%, #a855f7 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+/* ─── Cinematic vignette ─── */
+.vignette-overlay {
+    background: radial-gradient(ellipse 80% 70% at 50% 50%,
+            transparent 50%,
+            rgba(10, 14, 26, 0.6) 100%);
+}
+
+/* ─── Shimmer animation for CTA ─── */
+@keyframes shimmer {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+}
+
+/* ─── Ambient particles — GPU optimised, NO blur ─── */
+@keyframes particleFloat {
+    0% {
+        transform: translate3d(0, 0, 0) scale(1);
+        opacity: var(--p-opacity, 0.1);
+    }
+    25% { transform: translate3d(10px, -15px, 0) scale(1.15); }
+    50% {
+        transform: translate3d(-6px, -25px, 0) scale(0.85);
+        opacity: calc(var(--p-opacity, 0.1) * 1.4);
+    }
+    75% { transform: translate3d(12px, -10px, 0) scale(1.05); }
+    100% {
+        transform: translate3d(0, 0, 0) scale(1);
+        opacity: var(--p-opacity, 0.1);
+    }
+}
+
+.particle-float {
+    will-change: transform, opacity;
+    animation: particleFloat var(--duration, 15s) ease-in-out infinite;
+    animation-delay: var(--delay, 0s);
+    contain: strict;
+}
+
+/* ─── Neon glow text ─── */
+.neon-text {
+    text-shadow: 0 0 10px currentColor, 0 0 20px currentColor;
+}
+
+/* ─── Select element styling for dark theme ─── */
+select {
+    background-color: rgba(255, 255, 255, 0.03) !important;
+    color: rgba(255, 255, 255, 0.7);
+    cursor: pointer;
+}
+
+select option {
+    background-color: #121828;
+    color: rgba(255, 255, 255, 0.8);
+}
+
+/* ─── Focus ring ─── */
+*:focus-visible {
+    outline: 2px solid rgba(6, 182, 212, 0.4);
+    outline-offset: 2px;
+    border-radius: 8px;
+}
+
+/* ─── Smooth page transitions ─── */
+.page-enter {
+    animation: pageIn 0.3s ease-out;
+}
+
+@keyframes pageIn {
+    from {
+        opacity: 0;
+        transform: translateY(8px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* ─── Reduced motion support ─── */
+@media (prefers-reduced-motion: reduce) {
+    .particle-float,
+    .loader-pulse {
+        animation: none;
+    }
+    .glass:hover {
+        transform: none;
+    }
+}
